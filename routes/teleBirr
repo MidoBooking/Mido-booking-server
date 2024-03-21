@@ -1,0 +1,60 @@
+const express = require("express");
+const crypto = require("crypto");
+const axios = require("axios");
+const router = express.Router();
+
+const appId = "4633feeefd1d4b17bfa9a5302b42b0a9";
+const appKey = "eca9d0640f1344b3b70ddc25a5741bb2";
+const publicKey =
+  "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAgxWvdbKzGaYM19epio6Ul5Dx3yOcVS1b178mqG54Py6UZTBm7ZnNslO6cjAwmfITc1dGGvHrpZLyVRRvZ/hmDXb1gLlpN8i01eB/dyjPK0ByDeQeKCEZNlKKxXvzUzcvVzYe8fHN6Scbva8urs1tct1R2Rf82fs3qzLZCU3SFp7N+w305gQy7GJL9vbYeVVX3HyZRF8jOgQXgi7zRPNh8k50pQHziWBhYWrJ6W4r3TPHWYKDcLl8owl9vVxgNRXtTX+8zHaG6n1sBC86V4MfX4lsFC5DGl74KR6wIaio5QHnWtH1j3Z2qmO0/azCLv2BuuUC9i4e7JHBG4IvhTKZ9QIDAQAB";
+const sdkUrl =
+  "http://196.188.120.3:11443/ammapi/payment/service-openup/toTradeMobielPay";
+
+function generateSignature(data) {
+  const hmac = crypto.createHmac("sha256", appKey);
+  const signature = hmac.update(data).digest("hex");
+  return signature;
+}
+
+router.use(express.json());
+
+router.post("/initiate-payment", async (req, res) => {
+  try {
+    const requestData = {
+      appId: appId,
+      appKey: appKey,
+      publicKey: publicKey,
+      returnUrl: "http://your-return-url.com",
+      notifyUrl: "http://your-notify-url.com",
+      subject: req.body.subject,
+      outTradeNo: req.body.outTradeNo,
+      timeoutExpress: req.body.timeoutExpress,
+      totalAmount: req.body.totalAmount,
+      shortCode: "220579",
+      receiveName: "Bold Technologies",
+    };
+
+    // Generate signature
+    const signature = generateSignature(JSON.stringify(requestData));
+
+    // Make POST request to SDK URL
+    const response = await axios.post(sdkUrl, requestData, {
+      headers: {
+        Signature: signature,
+      },
+    });
+
+    // Return response from SDK
+    res.json(response.data);
+  } catch (error) {
+    if (error.response) {
+      console.error("Error:", error.response.data);
+      res.status(500).json({ error: "Internal Server Error" });
+    } else {
+      console.error("Error:", error.message);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  }
+});
+
+module.exports = router;
