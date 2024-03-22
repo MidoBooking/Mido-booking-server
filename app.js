@@ -17,13 +17,15 @@ app.use(express.static("public"));
 app.use(express.json()); // Middleware to parse JSON requests
 
 const firestore = admin.firestore();
-// Listen for real-time updates on the "booking" collection
-// Listen for real-time updates on the "booking" collection
+
+app.get("/server", (req, res) => {
+  res.send("mido server is running");
+});
 cron.schedule("* * * * *", async () => {
   console.log("Running deletion task...");
   try {
     const snapshot = await firestore.collection("bookings").get();
-    const fifteenMinutesAgo = Math.floor(Date.now() / 1000) - 2 * 60; // 15 minutes before the current time
+    const fifteenMinutesAgo = Math.floor(Date.now() / 1000) - 15 * 60; // 15 minutes before the current time
 
     snapshot.forEach((doc) => {
       const bookingData = doc.data();
