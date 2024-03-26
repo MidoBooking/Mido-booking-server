@@ -23,8 +23,10 @@ router.post("/setBooking", async (req, res) => {
       userLocation,
       imageUrl,
       approved = false,
-      payment=false,
+      payment = false,
       totalPrice,
+      selectedServiceProviderName,
+      expoPushToken,
     } = req.body;
 
     // Firestore database reference
@@ -32,7 +34,7 @@ router.post("/setBooking", async (req, res) => {
 
     // Create a new booking document
     const bookingRef = db.collection("bookings").doc();
-const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
     // Data to be stored in Firestore
     const bookingData = {
       businessOwnerId,
@@ -52,8 +54,10 @@ const timestamp = admin.firestore.FieldValue.serverTimestamp();
       ),
       approved,
       payment,
-       createdAt: timestamp,
-       totalPrice
+      createdAt: timestamp,
+      totalPrice,
+      selectedServiceProviderName,
+      expoPushToken,
     };
 
     // Set the booking data in Firestore

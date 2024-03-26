@@ -19,7 +19,7 @@ app.use(express.json()); // Middleware to parse JSON requests
 const firestore = admin.firestore();
 
 app.get("/server", (req, res) => {
-  res.send("mido server is running");
+  res.send("server is running");
 });
 cron.schedule("* * * * *", async () => {
   console.log("Running deletion task...");
@@ -122,6 +122,8 @@ const employeeRegister = require("./routes/SMS/employeeRegister");
 const employeeLogin = require("./routes/SMS/employeeLogin");
 //all users
 const allUsers = require("./routes/filteredUsers/allUsers");
+//Analytics
+const paymentAnalytics = require("./routes/Analytics/paymentAnalytics");
 app.use("/", indexRoute);
 app.use("/users", usersRoute);
 app.use("/", categoriesRoute);
@@ -186,6 +188,8 @@ app.use("/", employeeRegister);
 app.use("/", employeeLogin);
 //all users
 app.use("/", allUsers);
+//Payment analytics
+app.use("/", paymentAnalytics);
 // Start the server
 app.listen(PORT, (err) => {
   console.log(`Your dog server is up and running!`);

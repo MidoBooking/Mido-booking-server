@@ -9,29 +9,27 @@ class Telebirr {
     this.shortCode = shortCode;
     this.publicKey = publicKey;
     this.telebirrInAppUrl =
-            "https://app.ethiomobilemoney.et:2121/ammapi/payment/service-openup/toTradeSDKPay";
-
+      "https://app.ethiomobilemoney.et:2121/ammapi/payment/service-openup/toTradeSDKPay";
   }
-
   async makePayment({
     nonce,
-    notifyUrl = "https://server.bafta.co/notifyUrl",
+    notifyUrl,
     totalAmount,
     outTradeNo,
     receiveName,
-    returnApp ,
+    returnApp,
     returnUrl,
     subject,
     bookingId,
     timeoutExpress = `${24 * 60}`, // 1 day
   }) {
-   const notifyUrlWithBookingId = `${notifyUrl}/${bookingId}`;
+    const notifyUrlWithBookingId = `${notifyUrl}/${bookingId}`;
 
     const params = {
       appId: this.appId,
       appKey: this.appKey,
       nonce,
-      notifyUrl:notifyUrlWithBookingId, 
+      notifyUrl: notifyUrlWithBookingId,
       outTradeNo,
       receiveName,
       returnApp,
