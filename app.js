@@ -25,11 +25,11 @@ cron.schedule("* * * * *", async () => {
   console.log("Running deletion task...");
   try {
     const snapshot = await firestore.collection("bookings").get();
-    const fifteenMinutesAgo = Math.floor(Date.now() / 1000) - 15 * 60; // 15 minutes before the current time
+    const fifteenMinutesAgo = Math.floor(Date.now() / 1000) - 30 * 60; // 15 minutes before the current time
 
     snapshot.forEach((doc) => {
       const bookingData = doc.data();
-      console.log(bookingData);
+      //  console.log(bookingData);
       console.log(`Current Time: ${new Date()}`);
       if (bookingData.updatedAt) {
         if (
@@ -55,6 +55,135 @@ cron.schedule("* * * * *", async () => {
     console.error("Error fetching bookings:", error);
   }
 });
+//booking time notificaiton
+
+cron.schedule("* * * * *", async () => {
+  console.log("Running reminder notification task...");
+  try {
+    const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
+
+    const snapshot = await firestore
+      .collection("bookings")
+      .where("approved", "==", true)
+      .where("payment", "==", true)
+      .get();
+
+    snapshot.forEach(async (doc) => {
+      const bookingData = doc.data();
+      console.log("Current Time:", currentTime);
+
+      const selectedDateTimeStamp = bookingData.selectedDateTime;
+      console.log("Selected DateTimeStamp:", selectedDateTimeStamp.seconds);
+
+      // Convert Firestore timestamp to JavaScript Date object
+      const selectedDateTime = new Date(selectedDateTimeStamp.seconds * 1000);
+
+      // Calculate the difference between current time and selectedDateTime in minutes
+      const timeDifferenceMinutes = Math.floor(
+        (selectedDateTime.getTime() - currentTime * 1000) / 60000
+      );
+      console.log("Time difference (minutes):", timeDifferenceMinutes);
+
+      // Determine the appropriate reminder message based on the time difference
+      let reminderMessage = "";
+      if (timeDifferenceMinutes <= 30 && timeDifferenceMinutes > 0) {
+        if (timeDifferenceMinutes <= 30 && timeDifferenceMinutes > 20) {
+          reminderMessage = "Your appointment is in 30 minutes.";
+        } else if (timeDifferenceMinutes <= 20 && timeDifferenceMinutes > 10) {
+          reminderMessage = "Your appointment is in 20 minutes.";
+        } else if (timeDifferenceMinutes <= 10) {
+          reminderMessage = "Your appointment is in 10 minutes.";
+        }
+      }
+
+      if (reminderMessage !== "") {
+        console.log(`Sending reminder notification for booking: ${doc.id}`);
+        const expoPushToken = bookingData.expoPushToken;
+        if (expoPushToken) {
+          const payload = {
+            to: expoPushToken,
+            title: "Appointment Reminder",
+            body: reminderMessage,
+            data: {
+              customData: "Additional data for notification",
+            },
+          };
+          try {
+            const response = await axios.post(
+              "https://server.midoserver.site/expoPushNotification",
+              payload
+            );
+            console.log(
+              "Reminder push notification sent successfully:",
+              response.data
+            );
+          } catch (error) {
+            console.error("Error sending reminder push notification:", error);
+          }
+        } else {
+          console.log("Expo Push Token not found for booking:", doc.id);
+        }
+      }
+    });
+  } catch (error) {
+    console.error("Error executing reminder notification task:", error);
+  }
+});
+
+cron.schedule("* * * * *", async () => {
+  console.log("Running notification task...");
+  try {
+    const snapshot = await firestore
+      .collection("bookings")
+      .where("approved", "==", true)
+      .where("payment", "==", false)
+      .get();
+    snapshot.forEach(async (doc) => {
+      const bookingData = doc.data();
+      const lastNotificationTime = bookingData.lastNotificationTime || 0; // Get the last notification time for the booking or default to 0 if not found
+      const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
+
+      // Calculate the time elapsed since the last notification
+      const timeElapsed = currentTime - lastNotificationTime;
+      console.log("timeElapsed", timeElapsed);
+      // Check if it's time to send a notification (every 1 minute)
+      if (timeElapsed >= 60) {
+        console.log(`Sending notification for booking: ${doc.id}`);
+        const expoPushToken = bookingData.expoPushToken;
+        if (expoPushToken) {
+          const payload = {
+            to: expoPushToken,
+            title: "Booking Reminder",
+            body: "Your booking is pending payment.",
+            data: {
+              customData: "Additional data for notification",
+            },
+          };
+          try {
+            const response = await axios.post(
+              "https://server.midoserver.site/expoPushNotification",
+              payload
+            );
+            console.log("Push notification sent successfully:", response.data);
+            // Update the timestamp of the last notification sent for the booking
+            await doc.ref.update({ lastNotificationTime: currentTime });
+          } catch (error) {
+            console.error("Error sending push notification:", error);
+          }
+        } else {
+          console.log("Expo Push Token not found for booking:", doc.id);
+        }
+      } else {
+        console.log("time is lower");
+        console.log("last notifiacation", lastNotificationTime);
+        console.log("current time", currentTime);
+      }
+    });
+  } catch (error) {
+    console.error("Error executing notification task:", error);
+  }
+});
+
 // Routes
 const indexRoute = require("./routes/index");
 const usersRoute = require("./routes/users");
@@ -124,6 +253,9 @@ const employeeLogin = require("./routes/SMS/employeeLogin");
 const allUsers = require("./routes/filteredUsers/allUsers");
 //Analytics
 const paymentAnalytics = require("./routes/Analytics/paymentAnalytics");
+//expo push notificaiton
+const expoPushNotificaiton = require("./routes/SMS/expoPushNotification");
+const { default: axios } = require("axios");
 app.use("/", indexRoute);
 app.use("/users", usersRoute);
 app.use("/", categoriesRoute);
@@ -190,6 +322,8 @@ app.use("/", employeeLogin);
 app.use("/", allUsers);
 //Payment analytics
 app.use("/", paymentAnalytics);
+//expo push notificaiton
+app.use("/", expoPushNotificaiton);
 // Start the server
 app.listen(PORT, (err) => {
   console.log(`Your dog server is up and running!`);
